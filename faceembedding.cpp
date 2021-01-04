@@ -47,7 +47,7 @@ int FaceEmbedding::getEmbedding(cv::Mat& img, std::vector<float>& embedding_list
         MNN::CV::ImageProcess::create(MNN::CV::BGR, MNN::CV::RGB));
     pretreat->convert(image.data, in_w, in_h, image.step[0], mInputTensor);
 
-    auto start = std::chrono::steady_clock::now();
+    //auto start = std::chrono::steady_clock::now();
 
 
     // run network
@@ -60,10 +60,11 @@ int FaceEmbedding::getEmbedding(cv::Mat& img, std::vector<float>& embedding_list
     MNN::Tensor tensor_embedding_host(tensor_embedding, tensor_embedding->getDimensionType());
     tensor_embedding->copyToHostTensor(&tensor_embedding_host);
 
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-    std::cout << "embedding inference time:" << elapsed.count() << " s" << std::endl;
+    //auto end = std::chrono::steady_clock::now();
+    //std::chrono::duration<double> elapsed = end - start;
+    //std::cout << "embedding inference time:" << elapsed.count() << " s" << std::endl;
 
+    embedding_list.clear();
     for (int i = 0; i < 512; i++)
         embedding_list.push_back(tensor_embedding_host.host<float>()[i]);
 

@@ -53,6 +53,7 @@ cv::Mat align_face(const cv::Mat& img, const std::vector<cv::Point2f>& landmarks
     //Align
     cv::Mat result;
     cv::warpAffine(img, result, M, bbox.size());
+    //std::cout << "origin wxh = " << img.cols << "x" << img.rows << " -- result wxh = " << result.cols << "x" << result.rows << std::endl;
     return result;
 }
 
@@ -70,6 +71,9 @@ int main(int argc, char** argv) {
         cerr << "Unable to connect to camera" << endl;
         return 1;
     }
+
+    std::vector<float> stored;
+    bool bFirst = true;
 
     while (true) {
         cv::Mat frame;
@@ -93,25 +97,55 @@ int main(int argc, char** argv) {
             roi.y = det.top();
             roi.width = det.width();
             roi.height = det.height();
+#if 1
+            int square_w = (roi.width > roi.height ? roi.width : roi.height);
+            roi.x -= (square_w - roi.width) >> 1;
+            roi.y -= (square_w - roi.height) >> 1;
 
-            if (roi.x + roi.width > frame.cols)
+            if (roi.x < 0) {
+                roi.x = 0;
+            }
+
+            if (roi.y < 0) {
+                roi.y = 0;
+            }
+
+            if (roi.x + square_w > frame.cols)
+                square_w = frame.cols - roi.x;
+
+            if (roi.y + square_w > frame.rows)
+                square_w = frame.rows - roi.y;
+
+            roi.width = roi.height = square_w;
+#else
+            if (roi.x + roi.width > frame.cols) {
                 roi.width = frame.cols - roi.x;
+            }
 
-            if (roi.y + roi.height > frame.rows)
+            if (roi.y + roi.height > frame.rows) {
                 roi.height = frame.rows - roi.y;
-
-            //cout << "Number parts = " << shape.num_parts() << endl;
+            }
+#endif
             std::vector<cv::Point2f> landmarks;
             for (unsigned long i = 0; i < shape.num_parts(); i++) {
                 cv::Point2f pt;
-                pt.x = shape.part(i).x() - det.left();
-                pt.y = shape.part(i).y() - det.top();
+                pt.x = shape.part(i).x() - roi.x;
+                pt.y = shape.part(i).y() - roi.y;
                 landmarks.push_back(pt);
             }
 
             cv::Mat cropped = frame(roi), aligned;// , output;
             aligned = align_face(cropped, landmarks);
+            cv::imshow("aligned", aligned);
             faceEmbedding.getEmbedding(aligned, emb);
+            if (bFirst) {
+                stored = emb;
+                bFirst = false;
+            }
+            else {
+                float dist = cosineSimiliarity(stored, emb);
+                cout << "Cosine distance = " << dist << endl;
+            }
             cv::rectangle(frame, pt1, pt2, cv::Scalar(0, 255, 0), 2);
         }
 
